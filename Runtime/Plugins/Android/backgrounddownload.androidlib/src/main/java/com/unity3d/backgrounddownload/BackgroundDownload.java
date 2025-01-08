@@ -96,32 +96,61 @@ public class BackgroundDownload {
         }
     }
 
-    public float getProgress() {
-        if (error != null)
-            return 1.0f;
-        Uri uri = manager.getUriForDownloadedFile(id);
-        if (uri != null)
-            return 1.0f;
-        DownloadManager.Query query = new DownloadManager.Query();
-        query.setFilterById(id);
-        Cursor cursor = manager.query(query);
-        if (cursor.getCount() == 0) {
-            error = "Background download not found";
-            return 1.0f;
-        }
-        cursor.moveToFirst();
-        int downloaded = cursor.getInt(cursor.getColumnIndex(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR));
-        int total = cursor.getInt(cursor.getColumnIndex(DownloadManager.COLUMN_TOTAL_SIZE_BYTES));
-        cursor.close();
-        if (downloaded <= 0)
-            return 0.0f;
-        if (total <= 0)
-            return -1.0f;
-        float ret = downloaded / (float)total;
-        if (ret < 1.0f)
-            return ret;
-        return 1.0f;
+    public class DownloadProgress {
+    public float progress;
+    public int downloadedBytes;
+    public int totalBytes;
+}
+
+public DownloadProgress getProgress() {
+    DownloadProgress progressInfo = new DownloadProgress();
+    
+    if (error != null) {
+        progressInfo.progress = 1.0f;
+        progressInfo.downloadedBytes = 0;
+        progressInfo.totalBytes = 0;
+        return progressInfo;
     }
+    
+    Uri uri = manager.getUriForDownloadedFile(id);
+    if (uri != null) {
+        progressInfo.progress = 1.0f;
+        progressInfo.downloadedBytes = progressInfo.totalBytes;
+        return progressInfo;
+    }
+    
+    DownloadManager.Query query = new DownloadManager.Query();
+    query.setFilterById(id);
+    Cursor cursor = manager.query(query);
+    
+    if (cursor.getCount() == 0) {
+        error = "Background download not found";
+        progressInfo.progress = 1.0f;
+        progressInfo.downloadedBytes = 0;
+        progressInfo.totalBytes = 0;
+        cursor.close();
+        return progressInfo;
+    }
+    
+    cursor.moveToFirst();
+    int downloaded = cursor.getInt(cursor.getColumnIndex(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR));
+    int total = cursor.getInt(cursor.getColumnIndex(DownloadManager.COLUMN_TOTAL_SIZE_BYTES));
+    cursor.close();
+    
+    progressInfo.downloadedBytes = downloaded;
+    progressInfo.totalBytes = total;
+    
+    if (downloaded <= 0) {
+        progressInfo.progress = 0.0f;
+    } else if (total <= 0) {
+        progressInfo.progress = -1.0f;
+    } else {
+        float ret = downloaded / (float) total;
+        progressInfo.progress = (ret < 1.0f) ? ret : 1.0f;
+    }
+    
+    return progressInfo;
+}
 
     public String getDownloadUrl() {
         return downloadUri.toString();

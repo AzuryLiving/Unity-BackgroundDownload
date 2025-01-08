@@ -278,8 +278,48 @@ namespace Unity.Networking
 
         protected override float GetProgress()
         {
-            return _download.Call<float>("getProgress");
+             GetProgressInternalAsync(); 
+                return 0.0f;
         }
+
+        private async void GetProgressInternalAsync()
+{
+    await _asyncLock.WaitAsync(); 
+    try
+    {
+        await Task.Run(() =>
+        {
+            AndroidJNI.AttachCurrentThread();
+            try
+            {
+                AndroidJavaObject progressInfo = _download.Call<AndroidJavaObject>("getProgress");
+
+                if (progressInfo == null)
+                {
+                    Debug.LogError("Failed to get progress information.");
+                    return;
+                }
+
+                float progress = progressInfo.Get<float>("progress");
+                int downloadedBytes = progressInfo.Get<int>("downloadedBytes");
+                int totalBytes = progressInfo.Get<int>("totalBytes");
+
+                
+                Debug.Log($"[GetProgress] Progress: {progress * 100}%");
+                Debug.Log($"[GetProgress] Downloaded Bytes: {downloadedBytes}");
+                Debug.Log($"[GetProgress] Total Bytes: {totalBytes}");
+            }
+            finally
+            {
+                AndroidJNI.DetachCurrentThread();
+            }
+        });
+    }
+    finally
+    {
+        _asyncLock.Release();
+    }
+}
 
         public override void Dispose()
         {
