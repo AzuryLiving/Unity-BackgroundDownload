@@ -26,6 +26,8 @@ namespace Unity.Networking
         private AndroidJavaObject _download;
         private long _id = int.MinValue;
         private string _tempFilePath;
+        private float _cachedProgress = 0.0f;
+        private bool _isUpdatingProgress = false;
         
         static AndroidJavaObject _currentActivity;
         static Callback _finishedCallback;
@@ -277,17 +279,32 @@ namespace Unity.Networking
         public override bool keepWaiting { get { return _status == BackgroundDownloadStatus.Downloading; } }
 
         protected override float GetProgress()
+{
+    if (!_isUpdatingProgress)
+    {
+        _isUpdatingProgress = true;
+        UniTask.Run(async () =>
         {
-             GetProgressInternalAsync(); 
-                return 0.0f;
-        }
+            try
+            {
+                float progress = await GetProgressAsync();
+                _cachedProgress = progress; 
+            }
+            finally
+            {
+                _isUpdatingProgress = false; 
+            }
+        });
+    }
+    return _cachedProgress;
+}
 
-        private async void GetProgressInternalAsync()
+        private async UniTask<float> GetProgressAsync()
 {
     await _asyncLock.WaitAsync(); 
     try
     {
-        await Task.Run(() =>
+        return await UniTask.Run(() =>
         {
             AndroidJNI.AttachCurrentThread();
             try
@@ -297,17 +314,17 @@ namespace Unity.Networking
                 if (progressInfo == null)
                 {
                     Debug.LogError("Failed to get progress information.");
-                    return;
+                    return 0.0f;
                 }
 
                 float progress = progressInfo.Get<float>("progress");
                 int downloadedBytes = progressInfo.Get<int>("downloadedBytes");
                 int totalBytes = progressInfo.Get<int>("totalBytes");
 
-                
-                Debug.Log($"[GetProgress] Progress: {progress * 100}%");
-                Debug.Log($"[GetProgress] Downloaded Bytes: {downloadedBytes}");
-                Debug.Log($"[GetProgress] Total Bytes: {totalBytes}");
+                Debug.Log($"[GetProgressAsync] Progress: {progress * 100}%");
+                Debug.Log($"[GetProgressAsync] Total Bytes: {totalBytes}");
+
+                return progress;
             }
             finally
             {
@@ -320,6 +337,7 @@ namespace Unity.Networking
         _asyncLock.Release();
     }
 }
+
 
         public override void Dispose()
         {
