@@ -322,6 +322,7 @@ namespace Unity.Networking
                 int totalBytes = progressInfo.Get<int>("totalBytes");
 
                 Debug.Log($"[GetProgressAsync] Progress: {progress * 100}%");
+                Debug.Log($"[GetProgressAsync] Downloaded Bytes: {downloadedBytes}");
                 Debug.Log($"[GetProgressAsync] Total Bytes: {totalBytes}");
 
                 return progress;
