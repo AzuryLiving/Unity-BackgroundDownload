@@ -27,7 +27,7 @@ namespace Unity.Networking
         private AndroidJavaObject _download;
         private long _id = int.MinValue;
         private string _tempFilePath;
-        private float _cachedProgress = 0.0f;
+        private long _cachedProgress = -1;
         private bool _isUpdatingProgress = false;
         
         static AndroidJavaObject _currentActivity;
@@ -279,16 +279,16 @@ namespace Unity.Networking
         
         public override bool keepWaiting { get { return _status == BackgroundDownloadStatus.Downloading; } }
 
-        protected override float GetProgress()
-{
-    if (!_isUpdatingProgress)
-    {
-        _isUpdatingProgress = true;
-        UniTask.Run(async () =>
+        protected override long GetProgress()
+        {
+            if (!_isUpdatingProgress) 
+            { 
+                _isUpdatingProgress = true; 
+                UniTask.Run(async () =>
         {
             try
             {
-                float progress = await GetProgressAsync();
+                long progress = await GetProgressAsync();
                 _cachedProgress = progress; 
             }
             finally
@@ -300,9 +300,9 @@ namespace Unity.Networking
     return _cachedProgress;
 }
 
-        private async UniTask<float> GetProgressAsync()
-{
-    await _asyncLock.WaitAsync(); 
+        private async UniTask<long> GetProgressAsync() 
+        { 
+            await _asyncLock.WaitAsync(); 
     try
     {
         return await UniTask.Run(() =>
@@ -315,18 +315,18 @@ namespace Unity.Networking
                 if (progressInfo == null)
                 {
                     Debug.LogError("Failed to get progress information.");
-                    return 0.0f;
+                    return 0;
                 }
 
                 float progress = progressInfo.Get<float>("progress");
-                int downloadedBytes = progressInfo.Get<int>("downloadedBytes");
+                long downloadedBytes = progressInfo.Get<int>("downloadedBytes");
                 int totalBytes = progressInfo.Get<int>("totalBytes");
 
                 Debug.Log($"[GetProgressAsync] Progress: {progress * 100}%");
                 Debug.Log($"[GetProgressAsync] Downloaded Bytes: {downloadedBytes}");
                 Debug.Log($"[GetProgressAsync] Total Bytes: {totalBytes}");
 
-                return progress;
+                return downloadedBytes;
             }
             finally
             {

@@ -15,7 +15,7 @@ namespace Unity.Networking
 
         public override bool keepWaiting { get { return false; } }
 
-        protected override float GetProgress() { return 1.0f; }
+        protected override long GetProgress() { return -1; }
 
         internal static Dictionary<string, BackgroundDownload> LoadDownloads()
         {

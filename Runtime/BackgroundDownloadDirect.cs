@@ -11,7 +11,7 @@ namespace Unity.Networking
 {
     public sealed class BackgroundDownloadDirect : BackgroundDownload
     {
-        private UnityWebRequest         m_Request;
+        private UnityWebRequest m_Request;
         private CancellationTokenSource m_Cts;
 
         public BackgroundDownloadDirect(BackgroundDownloadConfig config) : base(config)
@@ -22,9 +22,9 @@ namespace Unity.Networking
 
         public override bool keepWaiting => _status == BackgroundDownloadStatus.Downloading;
 
-        protected override float GetProgress()
+        protected override long GetProgress()
         {
-            return m_Request?.downloadProgress ?? 1.0f;
+            return (long)(m_Request?.downloadedBytes ?? -1);
         }
 
         private async void StartDownloadAsync(CancellationToken cancellationToken)
