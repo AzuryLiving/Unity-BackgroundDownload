@@ -24,7 +24,14 @@ namespace Unity.Networking
 
         protected override long GetProgress()
         {
-            return (long)(m_Request?.downloadedBytes ?? -1);
+            if (m_Request != null)
+            {
+                return (long)m_Request.downloadedBytes;
+            }
+            else
+            {
+                return -1;
+            }
         }
 
         private async void StartDownloadAsync(CancellationToken cancellationToken)
