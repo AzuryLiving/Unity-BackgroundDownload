@@ -229,10 +229,10 @@ namespace Unity.Networking
         /// <summary>
         /// How far the request has progressed (0 to 1), negative value if unknown. Accessing this field can be very expensive (in particular on Android).
         /// </summary>
-        public float progress { get { return GetProgress(); } }
+        public long progress { get { return GetProgress(); } }
 
         /// <summary>For internal use.</summary>
-        protected abstract float GetProgress();
+        protected abstract long GetProgress();
 
         /// <summary>
         /// Disposes of this download, aborts the download if still in progress.

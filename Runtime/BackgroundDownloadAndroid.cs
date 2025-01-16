@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 
 namespace Unity.Networking
@@ -26,6 +27,8 @@ namespace Unity.Networking
         private AndroidJavaObject _download;
         private long _id = int.MinValue;
         private string _tempFilePath;
+        private long _cachedProgress = -1;
+        private bool _isUpdatingProgress = false;
         
         static AndroidJavaObject _currentActivity;
         static Callback _finishedCallback;
@@ -276,10 +279,63 @@ namespace Unity.Networking
         
         public override bool keepWaiting { get { return _status == BackgroundDownloadStatus.Downloading; } }
 
-        protected override float GetProgress()
+        protected override long GetProgress()
         {
-            return _download.Call<float>("getProgress");
-        }
+            if (!_isUpdatingProgress) 
+            { 
+                _isUpdatingProgress = true; 
+                UniTask.Run(async () =>
+        {
+            try
+            {
+                long progress = await GetProgressAsync();
+                _cachedProgress = progress; 
+            }
+            finally
+            {
+                _isUpdatingProgress = false; 
+            }
+        });
+    }
+    return _cachedProgress;
+}
+
+        private async UniTask<long> GetProgressAsync() 
+        { 
+            await _asyncLock.WaitAsync(); 
+    try
+    {
+        return await UniTask.Run(() =>
+        {
+            AndroidJNI.AttachCurrentThread();
+            try
+            {
+                AndroidJavaObject progressInfo = _download.Call<AndroidJavaObject>("getProgress");
+
+                if (progressInfo == null)
+                {
+                    Debug.LogError("Failed to get progress information.");
+                    return -1;
+                }
+
+                float progress = progressInfo.Get<float>("progress");
+                long downloadedBytes = progressInfo.Get<int>("downloadedBytes");
+                long totalBytes = progressInfo.Get<int>("totalBytes");
+
+                return downloadedBytes;
+            }
+            finally
+            {
+                AndroidJNI.DetachCurrentThread();
+            }
+        });
+    }
+    finally
+    {
+        _asyncLock.Release();
+    }
+}
+
 
         public override void Dispose()
         {
