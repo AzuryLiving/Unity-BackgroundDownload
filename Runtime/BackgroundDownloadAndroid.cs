@@ -315,16 +315,12 @@ namespace Unity.Networking
                 if (progressInfo == null)
                 {
                     Debug.LogError("Failed to get progress information.");
-                    return 0;
+                    return -1;
                 }
 
                 float progress = progressInfo.Get<float>("progress");
                 long downloadedBytes = progressInfo.Get<int>("downloadedBytes");
-                int totalBytes = progressInfo.Get<int>("totalBytes");
-
-                Debug.Log($"[GetProgressAsync] Progress: {progress * 100}%");
-                Debug.Log($"[GetProgressAsync] Downloaded Bytes: {downloadedBytes}");
-                Debug.Log($"[GetProgressAsync] Total Bytes: {totalBytes}");
+                long totalBytes = progressInfo.Get<int>("totalBytes");
 
                 return downloadedBytes;
             }
